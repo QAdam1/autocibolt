@@ -1,0 +1,31 @@
+name: Envs
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch: # Manual trigger only
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    environment: env
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+      
+      - name: Debug ENV
+        run: env | sort
+        env:
+          CI: true
+          EMPLOYEE_MAIL: ${{ secrets.EMPLOYEE_MAIL }}
+          CIBUS_PASSWORD: ${{ secrets.CIBUS_PASSWORD }}
+          CIBUS_COMPANY_NAME: ${{ secrets.CIBUS_COMPANY_NAME }}
+          MAIL_PROVIDER: ${{ secrets.MAIL_PROVIDER }}
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          TO_MAIL: ${{ secrets.TO_MAIL }}
