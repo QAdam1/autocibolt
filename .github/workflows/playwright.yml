@@ -37,6 +37,8 @@ jobs:
           MAIL_USER: ${{ secrets.MAIL_USER }}
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
           TO_MAIL: ${{ secrets.TO_MAIL }}
+          WOLT_COOKIES_B64: ${{ secrets.WOLT_COOKIES_B64 }}
+          WOLT_LOCAL_STORAGE_B64: ${{ secrets.WOLT_LOCAL_STORAGE_B64 }}
       
       - uses: actions/upload-artifact@v4
         if: always()

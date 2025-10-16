@@ -1,5 +1,5 @@
-import { webkit, chromium, BrowserType, Page, Browser } from 'playwright';
-import { readFile, writeFile } from 'fs/promises';
+import {webkit, chromium, BrowserType, Page, Browser} from 'playwright';
+import {readFile, writeFile} from "fs/promises";
 import {
     EMPLOYEE_MAIL,
     CIBUS_PASSWORD,
@@ -7,61 +7,69 @@ import {
     RUN_INTERVAL_HOUR,
     COOKIE_FILE_PATH,
     LOCAL_STORAGE_FILE_PATH,
-} from './config';
-import { getLatestGiftCardsFromMail, getLatestSmsCodeFromMail, sendMail } from './mailer';
-import { expect } from '@playwright/test';
+    WOLT_COOKIES_B64,
+    WOLT_LOCAL_STORAGE_B64
+} from "./config";
+import {getLatestGiftCardsFromMail, getLatestSmsCodeFromMail, sendMail} from "./mailer";
+import {expect} from "@playwright/test";
+import { decodeBase64, writeWoltCookiesToFile, writeWoltLocalStorageToFile } from './utils';
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 
 const setup = async (browserType: BrowserType, options: { copyCookies: boolean }) => {
     let browser: Browser;
     if (options.copyCookies === true) {
-        browser = await browserType.launch({ headless: false });
+        browser = await browserType.launch({headless: true});
     } else {
         // browser = await browserType.launch({headless: true});
-        browser = await browserType.launch({ headless: true });
+        browser = await browserType.launch({headless: true});
     }
     const context = await browser.newContext();
     const page = await context.newPage();
 
+    
     // Read and format cookies and inject to browser
+    await writeWoltCookiesToFile(JSON.parse(await decodeBase64(WOLT_COOKIES_B64)));
     const rawCookies = JSON.parse(await readFile(COOKIE_FILE_PATH, 'utf-8'));
     const formattedCookies = rawCookies.map((cookie: any) => ({
         ...cookie,
-        sameSite: 'Lax', // Force sameSite to 'Lax' for all cookies
+        sameSite: 'Lax' // Force sameSite to 'Lax' for all cookies
     }));
     await context.addCookies(formattedCookies);
-
+    
     // Read and format localStorage
-    const data = JSON.parse(await readFile(LOCAL_STORAGE_FILE_PATH, 'utf8'));
+    await writeWoltLocalStorageToFile(JSON.parse(await decodeBase64(WOLT_LOCAL_STORAGE_B64)));
+    const data = JSON.parse(await readFile(LOCAL_STORAGE_FILE_PATH, "utf8"));
 
     // Add logging for debugging
     console.log('Starting navigation to Wolt...');
     await page.goto('https://wolt.com/he/isr/tel-aviv/venue/woltilgiftcards', {
         waitUntil: 'domcontentloaded',
-        timeout: 60000,
+        timeout: 60000
     });
-    await page.evaluate(o => {
+    await page.evaluate((o) => {
         for (const [k, v] of Object.entries(o))
-            localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+            localStorage.setItem(k, typeof v === "string" ? v : JSON.stringify(v));
     }, data);
     await page.reload();
     console.log('Page loaded successfully');
     if (options.copyCookies === true) {
         console.log('Getting new cookies...');
         const newCookies = await page.context().cookies();
-        await writeFile(COOKIE_FILE_PATH, JSON.stringify(newCookies, null, 2), 'utf-8');
+        await writeWoltCookiesToFile(newCookies);
         console.log('Cookies retrieved successfully');
-        await page.close();
+        await page.close()
     }
-    return { browser, page };
-};
+    return {browser, page};
+}
+
 
 const scrapeWolt = async (): Promise<void> => {
     let browser: Browser | null = null;
     let page: Page | null = null;
     try {
-        ({ browser, page } = await setup(webkit, { copyCookies: false }));
+        ({browser, page} = await setup(webkit, {copyCookies: false}));
 
         // Debug page content
         const pageContent = await page.content();
@@ -69,7 +77,7 @@ const scrapeWolt = async (): Promise<void> => {
         console.log('Page URL:', page.url());
 
         // Take screenshot after page load
-        await page.screenshot({ path: 'screenshots/initial-page.png' });
+        await page.screenshot({path: 'screenshots/initial-page.png'});
 
         // Wait for a shorter time for the page to stabilize
         await sleep(5000);

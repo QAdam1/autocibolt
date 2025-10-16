@@ -6,10 +6,13 @@ import {
     CIBUS_COMPANY_NAME,
     RUN_INTERVAL_HOUR,
     COOKIE_FILE_PATH,
-    LOCAL_STORAGE_FILE_PATH
+    LOCAL_STORAGE_FILE_PATH,
+    WOLT_COOKIES_B64,
+    WOLT_LOCAL_STORAGE_B64
 } from "./config";
 import {getLatestGiftCardsFromMail, getLatestSmsCodeFromMail, sendMail} from "./mailer";
 import {expect} from "@playwright/test";
+import { decodeBase64, writeWoltCookiesToFile, writeWoltLocalStorageToFile } from './utils';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -25,15 +28,18 @@ const setup = async (browserType: BrowserType, options: { copyCookies: boolean }
     const context = await browser.newContext();
     const page = await context.newPage();
 
+    
     // Read and format cookies and inject to browser
+    await writeWoltCookiesToFile(JSON.parse(await decodeBase64(WOLT_COOKIES_B64)));
     const rawCookies = JSON.parse(await readFile(COOKIE_FILE_PATH, 'utf-8'));
     const formattedCookies = rawCookies.map((cookie: any) => ({
         ...cookie,
         sameSite: 'Lax' // Force sameSite to 'Lax' for all cookies
     }));
     await context.addCookies(formattedCookies);
-
+    
     // Read and format localStorage
+    await writeWoltLocalStorageToFile(JSON.parse(await decodeBase64(WOLT_LOCAL_STORAGE_B64)));
     const data = JSON.parse(await readFile(LOCAL_STORAGE_FILE_PATH, "utf8"));
 
     // Add logging for debugging
@@ -51,7 +57,7 @@ const setup = async (browserType: BrowserType, options: { copyCookies: boolean }
     if (options.copyCookies === true) {
         console.log('Getting new cookies...');
         const newCookies = await page.context().cookies();
-        await writeFile(COOKIE_FILE_PATH, JSON.stringify(newCookies, null, 2), 'utf-8');
+        await writeWoltCookiesToFile(newCookies);
         console.log('Cookies retrieved successfully');
         await page.close()
     }
@@ -90,8 +96,7 @@ const scrapeWolt = async (): Promise<void> => {
         const localStorageItems = await page.evaluate(() => {
             return {...localStorage}
         })
-        await writeFile(LOCAL_STORAGE_FILE_PATH, JSON.stringify(localStorageItems, null, 2), 'utf-8');
-
+        await writeWoltCookiesToFile(localStorageItems);
 
         try {
             console.log('Checking for restore order modal...');
@@ -230,7 +235,7 @@ const scrapeWolt = async (): Promise<void> => {
             }
             await cibusFrame.locator('#btnPay').click();
             console.log('Submitted Cibus payment');
-            
+
             await sleep(3000);
             console.log('Checking for completion...');
             const alreadyUsedModal = await page.locator('body > div.sc-75cea620-0.klDnoY.rtl > div').isVisible();

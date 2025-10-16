@@ -1,3 +1,6 @@
+import { writeFile } from 'fs/promises';
+import { COOKIE_FILE_PATH, LOCAL_STORAGE_FILE_PATH } from './config';
+
 export async function waitUntil(
     condition: () => Promise<boolean>,
     {
@@ -15,4 +18,16 @@ export async function waitUntil(
         }
         await new Promise(res => setTimeout(res, interval));
     }
+}
+
+export async function writeWoltCookiesToFile(newCookies: unknown): Promise<void> {
+    await writeFile(COOKIE_FILE_PATH, JSON.stringify(newCookies, null, 2), 'utf-8');
+}
+
+export async function writeWoltLocalStorageToFile(localStorage: unknown): Promise<void> {
+    await writeFile(LOCAL_STORAGE_FILE_PATH, JSON.stringify(localStorage, null, 2), 'utf-8');
+}
+
+export async function decodeBase64(b64String: string): Promise<string> {
+    return Buffer.from(b64String, 'base64').toString('utf-8');
 }
