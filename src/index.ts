@@ -218,14 +218,19 @@ const scrapeWolt = async (): Promise<void> => {
             console.log('Submitted Cibus form');
 
 
-            const txtWillPayFromCard = await cibusFrame.locator('#hTitleOTL').textContent();
-            if (txtWillPayFromCard === '(הסכום שיחוייב בכרטיס האשראי שלך :0  ש"ח)') {
-                await cibusFrame.locator('#btnPay').click();
-                console.log('Submitted Cibus payment');
-            } else {
+            await page.screenshot({path: `screenshots/cibus-pay-screen.png`});
+            const dailyAllowance = await cibusFrame.locator('#divUserInfo big').textContent();
+            const toPayFromCard = cibusFrame.locator('#hTitleOTL');
+            if  (dailyAllowance !== '₪55.0') {
+                console.log(`Cibus payment failed, because the daily allowance is not 55 NIS, but ${dailyAllowance}`);
+                throw new Error(`Cibus payment failed, because the daily allowance is not 55 NIS, but ${dailyAllowance}`);
+            } else if (await toPayFromCard.isVisible() &&  await toPayFromCard.textContent() !== '(הסכום שיחוייב בכרטיס האשראי שלך :0  ש"ח)'){
                 console.log('Cibus payment failed, because the payment will use the credit card');
                 throw new Error('Cibus payment failed, because the payment will use the credit card');
             }
+            await cibusFrame.locator('#btnPay').click();
+            console.log('Submitted Cibus payment');
+            
             await sleep(3000);
             console.log('Checking for completion...');
             const alreadyUsedModal = await page.locator('body > div.sc-75cea620-0.klDnoY.rtl > div').isVisible();
