@@ -202,27 +202,6 @@ const scrapeWolt = async (): Promise<void> => {
             console.log('Handling Cibus iframe...');
             const cibusFrame = page.locator('iframe[name="cibus-challenge"]').contentFrame();
 
-            console.log('Filling Cibus credentials...');
-            await cibusFrame.locator('#txtUserName').fill(EMPLOYEE_MAIL);
-            await cibusFrame.locator('#txtPassword').fill(CIBUS_PASSWORD);
-            if (await cibusFrame.locator('#txtCompany').isVisible()) await cibusFrame.locator('#txtCompany').fill(CIBUS_COMPANY_NAME);
-            console.log('Filled Cibus credentials');
-
-            console.log('Submitting Cibus form...');
-            await cibusFrame.locator('#btnSubmit').click();
-            console.log('Submitted Cibus form');
-            console.log('Filling email verification code...');
-            await cibusFrame.locator('#txtOTP').waitFor({state: 'visible', timeout: 5000});
-            console.log('Getting email verification code...');
-            const code = await getLatestSmsCodeFromMail(since);
-            console.log('Got email verification code');
-            await cibusFrame.locator('#txtOTP').fill(code);
-            console.log('Filled email verification code');
-            console.log('Submitting Cibus form...');
-            await cibusFrame.locator('#btnSubmit').click();
-            console.log('Submitted Cibus form');
-
-
             await page.screenshot({path: `screenshots/cibus-pay-screen.png`});
             const dailyAllowance = await cibusFrame.locator('#divUserInfo big').textContent();
             const toPayFromCard = cibusFrame.locator('#hTitleOTL');
